@@ -8,26 +8,25 @@
 \*===========================================================================*/
 var DCT = function (options) {
     this.cosMap = null,
-    this.options = options || {
-        numMfccBins: 12
-    };
+    this.options = options || {};
 
+    this.options.numCoefficients = this.options.numCoefficients || 12;
     this.options.lifter = this.options.lifter || this.lifterLinear;
 };
 
 DCT.prototype = {
     lifterLinear: function (scalar, ix) {
-      return scalar * ix;
+      return scalar * (ix+1);
     },
     // Builds a cosine map for the given block size. This allows multiple block sizes to be
     // memoized automagically.
-    memoizeCosines: function(blockSize) {
+    memoizeCosines: function(melSpecBins) {
       DCT.cosMap = DCT.cosMap || {};
-      DCT.cosMap[blockSize] = new Array(blockSize * 12);
+      DCT.cosMap[melSpecBins] = new Array(melSpecBins* 12);
 
       for (var i = 0; i < 12; i++) {
-        for (var m = 0; m < blockSize; m++) {
-          DCT.cosMap[blockSize][m + (i * blockSize)] = Math.cos(Math.PI * (i / blockSize) * (m + 0.5));
+        for (var melBin = 0; melBin < melSpecBins; melBin++) {
+          DCT.cosMap[melSpecBins][melBin + (i * melSpecBins)] = Math.cos(Math.PI * ((i+1) / melSpecBins) * (melBin + 0.5));
         }
       }
     },
@@ -41,10 +40,10 @@ DCT.prototype = {
       // n: number of MFCC bins
       // m: number of Spectrum bins
       // Usually n == 12 and 20 <= m <= 40
-      var bins = [];
-      while (bins.length < this.options.numMfccBins) bins.push(0);
+      var coefficients = [];
+      while (coefficients.length < this.options.numCoefficients) coefficients.push(0);
 
-      return bins.map(function (bin, ix) {
+      return coefficients.map(function (__, ix) {
         var scalar = spectrum.reduce(function (prev, cur, ix_, arr) {
           return prev + (cur * DCT.cosMap[L][ix_ + (ix * L)]);
         });

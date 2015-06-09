@@ -48,7 +48,10 @@ for (var i = 0; i < fftBins; i++) bins[i] = [];
 
 var wr = new wav.Reader(),
     filterBank = mfcc.constructFilterBank(fftBins, nMelSpecBins, minFreq, maxFreq, sampleRate),
-    dct = new mfcc.DCT();
+    dct = new mfcc.DCT({
+        lifter: undefined, 
+        numCoefficients: 12
+    });
 
 wr.on('data', function (buffer, offset, length) {
     framer.frame(buffer, function (frame) {
