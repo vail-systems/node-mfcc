@@ -6,41 +6,56 @@
  * tool to understand the Mel-scale and its related coefficients used in
  * human speech analysis.
 \*===========================================================================*/
-module.exports = {
-    cosMap: null,
-    options: {},
+var DCT = function (options) {
+    this.cosMap = null,
+    this.options = options || {
+        numMfccBins: 12
+    };
+
+    this.options.lifter = this.options.lifter || this.lifterLinear;
+};
+
+DCT.prototype = {
     lifterLinear: function (scalar, ix) {
       return scalar * ix;
     },
     // Builds a cosine map for the given block size. This allows multiple block sizes to be
     // memoized automagically.
-    memoize: function(blockSize) {
-      this.cosMap = this.cosMap || {};
-      this.cosMap[blockSize] = new Array(blockSize * 12);
+    memoizeCosines: function(blockSize) {
+      DCT.cosMap = DCT.cosMap || {};
+      DCT.cosMap[blockSize] = new Array(blockSize * 12);
 
       for (var i = 0; i < 12; i++) {
         for (var m = 0; m < blockSize; m++) {
-          this.cosMap[blockSize][m + (i * blockSize)] = Math.cos(Math.PI * ((i+1) / blockSize) * (m + 0.5));
+          DCT.cosMap[blockSize][m + (i * blockSize)] = Math.cos(Math.PI * (i / blockSize) * (m + 0.5));
         }
       }
     },
-    dct: function(spectrum) {
-      var L = spectrum.length;
+    run: function(spectrum) {
+      var L = spectrum.length,
+          self = this;
 
-      if (!this.cosMap || !this.cosMap[L]) this.memoize(L);
+      if (!DCT.cosMap || !DCT.cosMap[L]) this.memoizeCosines(L);
 
       // Discrete Cosine Transform is O(n*m) where:
       // n: number of MFCC bins
       // m: number of Spectrum bins
       // Usually n == 12 and 20 <= m <= 40
-      return [0,0,0,0,0,0,0,0,0,0,0,0].map(function (bin, ix) {
-        var scalar = spectrum.reduce(function (prev, cur, ix, arr) {
-          return prev + cur * cosTable[L][ix_ + (ix * L)];
+      var bins = [];
+      while (bins.length < this.options.numMfccBins) bins.push(0);
+
+      return bins.map(function (bin, ix) {
+        var scalar = spectrum.reduce(function (prev, cur, ix_, arr) {
+          return prev + (cur * DCT.cosMap[L][ix_ + (ix * L)]);
         });
 
-        return this.options.lifter ? this.options.lifter(scalar, ix) : scalar;
+        return self.options.lifter ? self.options.lifter(scalar, ix) : scalar;
       });
-    },
+    }
+};
+
+module.exports = {
+    DCT: DCT,
     /*
      * Given a set of amplitudes, estimates the power for those amplitudes.
      */
@@ -68,9 +83,7 @@ module.exports = {
      *   - Low Frequency == 200
      *   - High Frequency == 3500 
      */
-    constructFilterBank: constructFilterBank,
-    mfcc: function (frequencies, amplitudes) {
-          }
+    constructFilterBank: constructFilterBank
 };
 
 function constructFilterBank(nFrequencies, nBanks, lowF, highF, sampleRate) {

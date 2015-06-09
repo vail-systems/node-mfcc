@@ -47,7 +47,8 @@ var freqAssigned = false;
 for (var i = 0; i < fftBins; i++) bins[i] = [];
 
 var wr = new wav.Reader(),
-    filterBank = mfcc.constructFilterBank(fftBins, nMelSpecBins, minFreq, maxFreq, sampleRate);
+    filterBank = mfcc.constructFilterBank(fftBins, nMelSpecBins, minFreq, maxFreq, sampleRate),
+    dct = new mfcc.DCT();
 
 wr.on('data', function (buffer, offset, length) {
     framer.frame(buffer, function (frame) {
@@ -66,7 +67,8 @@ wr.on('data', function (buffer, offset, length) {
         var freqPowers = mfcc.periodogram(amplitudes),
             melSpec = filterBank(freqPowers);
 
-        console.log('melSpec:', melSpec);
+        var melCoefficients= dct.run(melSpec);
+        console.log('melCoefficients:', melCoefficients);
     });
 });
 
