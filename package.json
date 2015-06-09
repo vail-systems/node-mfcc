@@ -24,5 +24,10 @@
     "speech"
   ],
   "dependencies": {
+    "commander": "^2.8.1",
+    "fast-stats": "0.0.2",
+    "fft": "^0.2.1",
+    "frequencyjs": "0.0.3",
+    "wav": "^1.0.0"
   }
 }

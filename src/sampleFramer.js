@@ -9,15 +9,18 @@ var Framer = function (options) {
 
 Framer.prototype = {
     frame: function(buffer, callback) {
-        var self = this;
-        var cb = this.offset; //curByte
-        var frame = [];
+        var self = this,
+            cb = this.offset,
+            frame = [];
+
         while (cb < buffer.length) {
             if (this.map) frame.push(this.map[buffer.readUInt8(cb)]);
             else frame.push(buffer.readUInt8(cb));
             
             if (this.scale)
-                frame = frame.map(function (s, ix) {return s * self.scale[ix];});
+                frame = frame.map(function (s, ix) {
+                    return s * self.scale[ix];
+                });
 
             if (frame.length == this.sizeS)
             {
