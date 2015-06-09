@@ -1,0 +1,28 @@
+{
+  "name": "node-mfcc",
+  "version": "0.0.1",
+  "description": "Node.js implementation of the MFCC audio speech analysis algorithm with custom liftering.",
+  "license": "MIT",
+  "homepage": "https://github.com/joshjung/node-mfcc",
+  "repository": "joshjung/node-mfcc",
+  "contributors": [
+    "Joshua Jung <joshua.p.jung@gmail.com> (http://www.joshjung.com)",
+    "Ben Bryan <bbryan@vailsys.com>"
+  ],
+  "engines": {
+    "node": ">=0.12.0"
+  },
+  "main": "index.js",
+  "files": [
+    "src",
+    "test"
+  ],
+  "keywords": [
+    "mfcc",
+    "fft",
+    "audio",
+    "speech"
+  ],
+  "dependencies": {
+  }
+}
