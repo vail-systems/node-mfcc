@@ -3,7 +3,7 @@ Node.JS implementation of the MFCC algorithm.
 
 The MIT License (MIT)
 
-Copyright (c) 2015 Vail Systems
+Copyright (c) 2015 Vail Systems (Chicago, IL)
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal

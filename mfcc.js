@@ -16,6 +16,10 @@ var program = require('commander'),
     mfcc = require('./').mfcc;
 
 var u2pcm = require('./u2pcm');
+for (var k in u2pcm)
+{
+    u2pcm[k] = u2pcm[k] / 32767;
+}
 
 program.version('0.1')
        .usage('[options] [wav] [out]')
@@ -54,7 +58,7 @@ var wr = new wav.Reader(),
     });
 
 wr.on('data', function (buffer, offset, length) {
-    framer.frame(buffer, function (frame) {
+    framer.frame(buffer, function (frame, fIx) {
         var spectrum = fjs.toSpectrum(frame, {
                 sampling: sampleRate, 
                 method: 'fft'
@@ -67,11 +71,12 @@ wr.on('data', function (buffer, offset, length) {
             amplitudes.push(spectra.amplitude);
         });
 
+        console.log(spectrum);
         var freqPowers = mfcc.periodogram(amplitudes),
             melSpec = filterBank(freqPowers);
 
         var melCoefficients= dct.run(melSpec);
-        console.log('melCoefficients:', melCoefficients);
+        //console.log([fIx].concat(melCoefficients).join(','));
     });
 });
 

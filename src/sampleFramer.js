@@ -1,5 +1,7 @@
 var Framer = function (options) {
     options = options || {};
+
+    this.fIx = 0;
     this.sizeS = options.sizeS || 64;
     this.stepS = options.stepS || this.sizeS;
     this.map = options.map || undefined;
@@ -16,17 +18,18 @@ Framer.prototype = {
         while (cb < buffer.length) {
             if (this.map) frame.push(this.map[buffer.readUInt8(cb)]);
             else frame.push(buffer.readUInt8(cb));
-            
-            if (this.scale)
-                frame = frame.map(function (s, ix) {
-                    return s * self.scale[ix];
-                });
 
             if (frame.length == this.sizeS)
             {
-                callback(frame);
+                if (this.scale)
+                    frame = frame.map(function (s, ix) {
+                        return s * self.scale[ix];
+                    });
+
+                callback(frame, this.fIx);
                 frame = [];
                 cb -= (this.sizeS - this.stepS);
+                this.fIx++;
             }
             cb++;
         }
