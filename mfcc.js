@@ -78,8 +78,9 @@ if (program.fft)
     var freqPowers = mfcc.periodogram(amplitudes),
         melSpec = filterBank(freqPowers);
 
+    console.log(melSpec);
     var melCoefficients = dct.run(melSpec);
-    console.log(melCoefficients.join(','));
+    //console.log(melCoefficients.join(','));
     
     //console.log(jsonFFTBins.length);
     process.exit(1); 

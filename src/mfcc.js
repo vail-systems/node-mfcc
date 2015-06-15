@@ -92,7 +92,7 @@ function constructFilterBank(nFrequencies, nBanks, lowF, highF, sampleRate) {
 
     var lowM = hzToMels(lowF),
         highM = hzToMels(highF),
-        deltaM = (highM - lowM) / nBanks;
+        deltaM = (highM - lowM) / (nBanks+1);
 
     // Construct equidistant Mel values between lowM and highM.
     for (var i = 0; i < nBanks; i++) {
