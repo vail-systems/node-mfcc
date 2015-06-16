@@ -20,13 +20,13 @@ DCT.prototype = {
     },
     // Builds a cosine map for the given block size. This allows multiple block sizes to be
     // memoized automagically.
-    memoizeCosines: function(melSpecBins) {
+    memoizeCosines: function(numMelSpecBins) {
       DCT.cosMap = DCT.cosMap || {};
-      DCT.cosMap[melSpecBins] = new Array(melSpecBins* 12);
+      DCT.cosMap[numMelSpecBins] = new Array(numMelSpecBins* 12);
 
       for (var i = 0; i < 12; i++) {
-        for (var melBin = 0; melBin < melSpecBins; melBin++) {
-          DCT.cosMap[melSpecBins][melBin + (i * melSpecBins)] = Math.cos(Math.PI * ((i+1) / melSpecBins) * (melBin + 0.5));
+        for (var melBin = 0; melBin < numMelSpecBins; melBin++) {
+          DCT.cosMap[numMelSpecBins][melBin + (i * numMelSpecBins)] = Math.cos(Math.PI * ((i+1) / numMelSpecBins) * (melBin + 0.5));
         }
       }
     },
