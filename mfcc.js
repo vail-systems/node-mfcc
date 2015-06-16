@@ -26,7 +26,8 @@ program.version('0.1')
        .usage('[options]')
        .option('-v, --verbose', 'Supply to turn on verbose output. Default 0.', 0)
        .option('-w, --wav [wav]', '[INPUT]: Supply a wave file to process.', undefined)
-       .option('-f, --fft [json]', '[INPUT]: Supply a JSON file of FFT bins to process (primarily for testing).', undefined);
+       .option('-f, --fft [json]', '[INPUT]: Supply a JSON file of FFT bins to process (primarily for testing).', undefined)
+       .option('-o, --output [csv]', 'Output CSV (will append).', undefined);
 
 program.parse(process.argv);
 
@@ -78,11 +79,17 @@ if (program.fft)
     var freqPowers = mfcc.periodogram(amplitudes),
         melSpec = filterBank(freqPowers);
 
-    console.log(melSpec);
     var melCoefficients = dct.run(melSpec);
-    //console.log(melCoefficients.join(','));
-    
-    //console.log(jsonFFTBins.length);
+
+    var columns = melCoefficients.map(function (mc, ix) {
+        return 'mfcc' + (ix+1); 
+    });
+
+    if (program.output)
+        output(columns, [melCoefficients]);
+    else
+        console.log(melSpec);
+
     process.exit(1); 
 }
 
@@ -155,6 +162,31 @@ function statistics() {
     });
 }
 
-function writeToCSV() {
-    
+function writeCSVHeader(columns) {
+    var headers = columns.join(',');
+
+    fs.writeFileSync(program.output, headers);
+}
+
+function output(columns, rows) {
+   // First see if CSV already exists
+   if (fs.existsSync(program.output))
+   {
+       var contents = fs.readFileSync(program.output).toString();
+
+       if (contents.indexOf(columns[0]) == -1)
+           writeCSVHeader(columns);
+       // Otherwise header already exists
+   }
+   else 
+       writeCSVHeader(columns);
+
+   rows = rows.map(function (r) {
+       return r.join(',');
+   });
+
+   rows = rows.join('\n');
+
+   // Write out a single line of data
+   fs.appendFileSync(program.output, '\n' + rows);
 }
