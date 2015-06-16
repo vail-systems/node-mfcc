@@ -27,20 +27,21 @@ program.version('0.1')
        .option('-v, --verbose', 'Supply to turn on verbose output. Default 0.', 0)
        .option('-w, --wav [wav]', '[INPUT]: Supply a wave file to process.', undefined)
        .option('-f, --fft [json]', '[INPUT]: Supply a JSON file of FFT bins to process (primarily for testing).', undefined)
+       .option('-d, --dct [json]', '[INPUT]: Supply a JSON file of inputs for the DCT stage to process (primarily for testing).', undefined)
        .option('-o, --output [csv]', 'Output CSV (will append).', undefined);
 
 program.parse(process.argv);
 
-if (program.wav === undefined && program.fft === undefined)
+if (program.wav === undefined && program.fft === undefined && program.dct === undefined)
 {
     console.log('Must choose an input type from the program options.');
     program.outputHelp();
     process.exit(1);
 }
 
-if (program.wav && program.fft)
+if ((program.wav && program.fft) || (program.wav && program.dct) || (program.fft && program.dct))
 {
-    console.log('Please provide either a .wav file or a .json FFT file but not both!');
+    console.log('Please provide a .wav file, a .json FFT, or a .json DCT file but not more than one!');
     process.exit(1);
 }
 
@@ -71,9 +72,10 @@ if (program.fft)
     });
 
     // Assumes the file contains an array of FFT bins  
-    var amplitudes = JSON.parse(fs.readFileSync(path.resolve(program.fft)).toString());
-    amplitudes = amplitudes.map(parseFloat);
+    var amplitudes = parseFFTAmplitudes(program.fft);
 
+    // This filterbank, periodogram and melspec generation are an important part of the MFCC as a whole,
+    // but not necessary in the testing of the DCT on its own, using the -d option.
     var filterBank = mfcc.constructFilterBank(amplitudes.length, nMelSpecBins, minFreq, maxFreq, sampleRate);
 
     var freqPowers = mfcc.periodogram(amplitudes),
@@ -92,6 +94,32 @@ if (program.fft)
 
     process.exit(1); 
 }
+
+/*-----------------------------------------------------------------------------------*\
+ * DCT JSON file
+\*-----------------------------------------------------------------------------------*/
+if (program.dct)
+{
+    var dct = new mfcc.DCT({
+        lifter: undefined,
+        numCoefficients: 12
+    });
+
+    var spectrum = parseFFTAmplitudes(program.dct);
+
+    var dctCoefficients = dct.run(spectrum);
+
+    var columns = dctCoefficients.map(function(mc, ix) {
+        return 'dct' + (ix + 1);
+    });
+
+    if (program.output) {
+        output(columns, [dctCoefficients]);
+    } else {
+        console.log(spectrum);
+    }
+}
+
 
 /*-----------------------------------------------------------------------------------*\
  * .wav file
@@ -150,6 +178,11 @@ if (program.wav)
 
     var start = new Date().getTime();
     fs.createReadStream(program.args[0]).pipe(wr);
+}
+
+function parseFFTAmplitudes(fftBinFile) {
+    var amplitudes = JSON.parse(fs.readFileSync(path.resolve(fftBinFile)).toString());
+    return amplitudes.map(parseFloat);
 }
 
 function statistics() {
