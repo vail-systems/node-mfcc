@@ -49,7 +49,7 @@ var freqAssigned = false;
     sampleRate = 8000,
     minFreq = 300,
     maxFreq = 3500,
-    nMelSpecBins = 26,
+    nMelSpecFilters = 26,
     framerSamples = 64,
     framerStep = 64,
     fftBins = framerSamples / 2,
@@ -76,7 +76,7 @@ if (program.fft)
 
     // This filterbank, periodogram and melspec generation are an important part of the MFCC as a whole,
     // but not necessary in the testing of the DCT on its own, using the -d option.
-    var filterBank = mfcc.constructFilterBank(amplitudes.length, nMelSpecBins, minFreq, maxFreq, sampleRate);
+    var filterBank = mfcc.constructFilterBank(amplitudes.length, nMelSpecFilters, minFreq, maxFreq, sampleRate);
 
     var freqPowers = mfcc.periodogram(amplitudes),
         melSpec = filterBank(freqPowers);
@@ -127,7 +127,7 @@ if (program.dct)
 if (program.wav)
 {
     var wr = new wav.Reader(),
-        filterBank = mfcc.constructFilterBank(fftBins, nMelSpecBins, minFreq, maxFreq, sampleRate),
+        filterBank = mfcc.constructFilterBank(fftBins, nMelSpecFilters, minFreq, maxFreq, sampleRate),
         dct = new mfcc.DCT({
             lifter: undefined, 
             numCoefficients: 12

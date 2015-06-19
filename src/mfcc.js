@@ -20,13 +20,13 @@ DCT.prototype = {
     },
     // Builds a cosine map for the given block size. This allows multiple block sizes to be
     // memoized automagically.
-    memoizeCosines: function(numMelSpecBins) {
+    memoizeCosines: function(numMelFrequencies) {
       DCT.cosMap = DCT.cosMap || {};
-      DCT.cosMap[numMelSpecBins] = new Array(numMelSpecBins* 12);
+      DCT.cosMap[numMelFrequencies] = new Array(Math.pow(numMelFrequencies, 2));
 
-      for (var i = 0; i < 12; i++) {
-        for (var melBin = 0; melBin < numMelSpecBins; melBin++) {
-          DCT.cosMap[numMelSpecBins][melBin + (i * numMelSpecBins)] = Math.cos(Math.PI * ((i+1) / numMelSpecBins) * (melBin + 0.5));
+      for (var k = 0; k < numMelFrequencies; k++) {
+        for (var n = 0; n < numMelFrequencies; n++) {
+          DCT.cosMap[numMelFrequencies][n + (k * numMelFrequencies)] = Math.cos(Math.PI / numMelFrequencies * (n + 0.5) * k);
         }
       }
     },
@@ -85,17 +85,17 @@ module.exports = {
     constructFilterBank: constructFilterBank
 };
 
-function constructFilterBank(nFrequencies, nBanks, lowF, highF, sampleRate) {
+function constructFilterBank(nFrequencies, nFilters, lowF, highF, sampleRate) {
     var bins = [],
         fq = [],
         filters = [];
 
     var lowM = hzToMels(lowF),
         highM = hzToMels(highF),
-        deltaM = (highM - lowM) / (nBanks+1);
+        deltaM = (highM - lowM) / (nFilters+1);
 
     // Construct equidistant Mel values between lowM and highM.
-    for (var i = 0; i < nBanks; i++) {
+    for (var i = 0; i < nFilters; i++) {
         // Get the Mel value and convert back to frequency.
         // e.g. 200 hz <=> 401.25 Mel
         fq[i] = melsToHz(lowM + (i * deltaM));
