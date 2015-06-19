@@ -26,7 +26,7 @@ DCT.prototype = {
 
       for (var k = 0; k < numMelFrequencies; k++) {
         for (var n = 0; n < numMelFrequencies; n++) {
-          DCT.cosMap[numMelFrequencies][n + (k * numMelFrequencies)] = Math.cos(Math.PI / numMelFrequencies * (n + 0.5) * k);
+          DCT.cosMap[numMelFrequencies][n + (k * numMelFrequencies)] = Math.cos((Math.PI / numMelFrequencies) * ((n + 0.5) * k));
         }
       }
     },

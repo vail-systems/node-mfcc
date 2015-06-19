@@ -100,12 +100,12 @@ if (program.fft)
 \*-----------------------------------------------------------------------------------*/
 if (program.dct)
 {
+    var spectrum = parseFFTAmplitudes(program.dct);
+
     var dct = new mfcc.DCT({
         lifter: undefined,
-        numCoefficients: 12
+        numCoefficients: spectrum.length
     });
-
-    var spectrum = parseFFTAmplitudes(program.dct);
 
     var dctCoefficients = dct.run(spectrum);
 
@@ -116,7 +116,7 @@ if (program.dct)
     if (program.output) {
         output(columns, [dctCoefficients]);
     } else {
-        console.log(spectrum);
+        console.log(dctCoefficients);
     }
 }
 
