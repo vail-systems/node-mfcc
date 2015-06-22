@@ -14,9 +14,11 @@ var program = require('commander'),
     wav = require('wav'),
     Framer = require('./').Framer,
     windows = require('./').windows,
-    mfcc = require('./').mfcc;
+    mfcc = require('./').mfcc,
+    dct = require('dct');
 
 var u2pcm = require('./u2pcm');
+
 for (var k in u2pcm)
 {
     u2pcm[k] = u2pcm[k] / 32767;
@@ -66,11 +68,6 @@ for (var i = 0; i < fftBins; i++) bins[i] = [];
 \*-----------------------------------------------------------------------------------*/
 if (program.fft)
 {
-    var dct = new mfcc.DCT({
-        lifter: undefined, 
-        numCoefficients: 12
-    });
-
     // Assumes the file contains an array of FFT bins  
     var amplitudes = parseFFTAmplitudes(program.fft);
 
@@ -81,7 +78,7 @@ if (program.fft)
     var freqPowers = mfcc.periodogram(amplitudes),
         melSpec = filterBank(freqPowers);
 
-    var melCoefficients = dct.run(melSpec);
+    var melCoefficients = dct(melSpec);
 
     var columns = melCoefficients.map(function (mc, ix) {
         return 'mfcc' + (ix+1); 
@@ -102,12 +99,7 @@ if (program.dct)
 {
     var spectrum = parseFFTAmplitudes(program.dct);
 
-    var dct = new mfcc.DCT({
-        lifter: undefined,
-        numCoefficients: spectrum.length
-    });
-
-    var dctCoefficients = dct.run(spectrum);
+    var dctCoefficients = dct(spectrum);
 
     var columns = dctCoefficients.map(function(mc, ix) {
         return 'dct' + (ix + 1);
@@ -127,12 +119,8 @@ if (program.dct)
 if (program.wav)
 {
     var wr = new wav.Reader(),
-        filterBank = mfcc.constructFilterBank(fftBins, nMelSpecFilters, minFreq, maxFreq, sampleRate),
-        dct = new mfcc.DCT({
-            lifter: undefined, 
-            numCoefficients: 12
-        });
-
+        filterBank = mfcc.constructFilterBank(fftBins, nMelSpecFilters, minFreq, maxFreq, sampleRate);
+        
     wr.on('data', function (buffer, offset, length) {
         framer.frame(buffer, function (frame, fIx) {
             var spectrum = fjs.toSpectrum(frame, {

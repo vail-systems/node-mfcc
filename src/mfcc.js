@@ -6,55 +6,9 @@
  * tool to understand the Mel-scale and its related coefficients used in
  * human speech analysis.
 \*===========================================================================*/
-var DCT = function (options) {
-    this.cosMap = null,
-    this.options = options || {};
-
-    this.options.numCoefficients = this.options.numCoefficients || 12;
-    this.options.lifter = this.options.lifter || this.lifterLinear;
-};
-
-DCT.prototype = {
-    lifterLinear: function (scalar, ix) {
-      return scalar * (ix+1);
-    },
-    // Builds a cosine map for the given block size. This allows multiple block sizes to be
-    // memoized automagically.
-    memoizeCosines: function(numMelFrequencies) {
-      DCT.cosMap = DCT.cosMap || {};
-      DCT.cosMap[numMelFrequencies] = new Array(Math.pow(numMelFrequencies, 2));
-
-      for (var k = 0; k < numMelFrequencies; k++) {
-        for (var n = 0; n < numMelFrequencies; n++) {
-          DCT.cosMap[numMelFrequencies][n + (k * numMelFrequencies)] = Math.cos((Math.PI / numMelFrequencies) * ((n + 0.5) * k));
-        }
-      }
-    },
-    run: function(spectrum) {
-      var L = spectrum.length,
-          self = this;
-
-      if (!DCT.cosMap || !DCT.cosMap[L]) this.memoizeCosines(L);
-
-      // Discrete Cosine Transform is O(n*m) where:
-      // n: number of MFCC bins
-      // m: number of Spectrum bins
-      // Usually n == 12 and 20 <= m <= 40
-      var coefficients = [];
-      while (coefficients.length < this.options.numCoefficients) coefficients.push(0);
-
-      return coefficients.map(function (__, ix) {
-        var scalar = spectrum.reduce(function (prev, cur, ix_, arr) {
-          return prev + (cur * DCT.cosMap[L][ix_ + (ix * L)]);
-        });
-
-        return self.options.lifter ? self.options.lifter(scalar, ix) : scalar;
-      });
-    }
-};
+var dct = require('dct');
 
 module.exports = {
-    DCT: DCT,
     /*
      * Given a set of amplitudes, estimates the power for those amplitudes.
      */
