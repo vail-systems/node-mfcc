@@ -78,7 +78,12 @@ wr.on('data', function (buffer, offset, length) {
     {
       console.log(phasorMagnitudes.join(','));
     }
-    else if (!program.debug) console.log(fIx + ',' + result.join(','));
+    else if (!program.debug)
+    {
+      result = result.slice(0,12).map(function (f) {return f.toFixed(4);});
+
+      console.log(fIx + ',' + result.join(','));
+    }
   });
 });
 
