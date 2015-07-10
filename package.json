@@ -28,7 +28,9 @@
     "dct": "^0.0.2",
     "fast-stats": "0.0.2",
     "fft": "^0.2.1",
+    "fft-js": "0.0.6",
     "frequencyjs": "0.0.3",
+    "signal-windows": "0.0.1",
     "wav": "^1.0.0"
   }
 }

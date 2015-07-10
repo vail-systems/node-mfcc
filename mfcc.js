@@ -7,207 +7,117 @@
  * human speech analysis.
 \*===========================================================================*/
 var program = require('commander'),
-    Stats = require('fast-stats').Stats,
-    fs = require('fs'),
-    path = require('path'),
-    fjs = require('frequencyjs'),
-    wav = require('wav'),
-    Framer = require('./').Framer,
-    windows = require('./').windows,
-    mfcc = require('./').mfcc,
-    dct = require('dct');
-
-var u2pcm = require('./u2pcm');
-
-for (var k in u2pcm)
-{
-    u2pcm[k] = u2pcm[k] / 32767;
-}
+  fs = require('fs'),
+  path = require('path'),
+  wav = require('wav'),
+  fft = require('fft-js'),
+  Framer = require('signal-windows').framer,
+  ham = undefined,
+  mfcc = require('./');
 
 program.version('0.1')
        .usage('[options]')
-       .option('-v, --verbose', 'Supply to turn on verbose output. Default 0.', 0)
-       .option('-w, --wav [wav]', '[INPUT]: Supply a wave file to process.', undefined)
-       .option('-f, --fft [json]', '[INPUT]: Supply a JSON file of FFT bins to process (primarily for testing).', undefined)
-       .option('-d, --dct [json]', '[INPUT]: Supply a JSON file of inputs for the DCT stage to process (primarily for testing).', undefined)
-       .option('-o, --output [csv]', 'Output CSV (will append).', undefined);
+       .option('-v, --verbose', 'True for verbose output.', 0)
+       .option('-d, --debug [type]', '0: none, 1: Output power spectrum, post-filterbank values, and Mel coefficients. 2: output filter banks used. 3: output frequency magnitudes. Default 0.', 0)
+       .option('-w, --wav [wav]', 'Wave file path to process.', undefined)
+       .option('-m, --minFrequency [number]', 'Low frequency cutoff for MFCC. Default 300', 300)
+       .option('-x, --maxFrequency [number]', 'High frequency cutoff for MFCC. Default 3500', 3500)
+       .option('-f, --numMelSpecFilters [number]', 'Number of mel spec filter banks to use. Default is 26.', 26)
+       .option('-n, --samplesPerFrame [number]', 'Number of samples per frame to pass into the FFT. Default 128.', 128)
+       .option('-s, --samplesPerStep [number]', 'Number of samples to step between each frame. Default is samplesPerFrame.', 128);
 
 program.parse(process.argv);
 
-if (program.wav === undefined && program.fft === undefined && program.dct === undefined)
+if (program.wav === undefined)
 {
-    console.log('Must choose an input type from the program options.');
-    program.outputHelp();
-    process.exit(1);
+  console.log('Please provide a wave file to process.');
+  program.outputHelp();
+  process.exit(1);
 }
 
-if ((program.wav && program.fft) || (program.wav && program.dct) || (program.fft && program.dct))
-{
-    console.log('Please provide a .wav file, a .json FFT, or a .json DCT file but not more than one!');
-    process.exit(1);
-}
+program.minFrequency = parseInt(program.minFrequency);
+program.maxFrequency = parseInt(program.maxFrequency);
+program.numMelSpecFilters = parseInt(program.numMelSpecFilters);
+program.samplesPerFrame = parseInt(program.samplesPerFrame);
+program.samplesPerStep = parseInt(program.samplesPerStep);
 
-var freqAssigned = false;
-    sampleRate = 8000,
-    minFreq = 300,
-    maxFreq = 3500,
-    nMelSpecFilters = 26,
-    framerSamples = 64,
-    framerStep = 64,
-    fftBins = framerSamples / 2,
-    framer = undefined,
-    bins = [],
-    binsStats = [],
-    binsToFreq = [],
-    win = windows.construct('ham', framerSamples, 0.71);
+if (program.samplesPerFrame & (program.samplesPerFrame-1) !== 0)
+  throw Error('Please provide a samplesPerFrame that is a power of 2 (e.g. 32, 64, 128, 256, etc.). Was: ' + program.samplesPerFrame);
 
-for (var i = 0; i < fftBins; i++) bins[i] = [];
-
-/*-----------------------------------------------------------------------------------*\
- * FFT JSON file
-\*-----------------------------------------------------------------------------------*/
-if (program.fft)
-{
-    // Assumes the file contains an array of FFT bins  
-    var amplitudes = parseFFTAmplitudes(program.fft);
-
-    // This filterbank, periodogram and melspec generation are an important part of the MFCC as a whole,
-    // but not necessary in the testing of the DCT on its own, using the -d option.
-    var filterBank = mfcc.constructFilterBank(amplitudes.length, nMelSpecFilters, minFreq, maxFreq, sampleRate);
-
-    var freqPowers = mfcc.periodogram(amplitudes),
-        melSpec = filterBank(freqPowers);
-
-    var melCoefficients = dct(melSpec);
-
-    var columns = melCoefficients.map(function (mc, ix) {
-        return 'mfcc' + (ix+1); 
-    });
-
-    if (program.output)
-        output(columns, [melCoefficients]);
-    else
-        console.log(melSpec);
-
-    process.exit(1); 
-}
-
-/*-----------------------------------------------------------------------------------*\
- * DCT JSON file
-\*-----------------------------------------------------------------------------------*/
-if (program.dct)
-{
-    var spectrum = parseFFTAmplitudes(program.dct);
-
-    var dctCoefficients = dct(spectrum);
-
-    var columns = dctCoefficients.map(function(mc, ix) {
-        return 'dct' + (ix + 1);
-    });
-
-    if (program.output) {
-        output(columns, [dctCoefficients]);
-    } else {
-        console.log(dctCoefficients);
-    }
-}
-
+var mfcc,   // We construct after loading the wav file and reading the header.
+    framer, // Framer is also constructed after loading the wav file
+    sampleRate;
 
 /*-----------------------------------------------------------------------------------*\
  * .wav file
 \*-----------------------------------------------------------------------------------*/
-if (program.wav)
-{
-    var wr = new wav.Reader(),
-        filterBank = mfcc.constructFilterBank(fftBins, nMelSpecFilters, minFreq, maxFreq, sampleRate);
-        
-    wr.on('data', function (buffer, offset, length) {
-        framer.frame(buffer, function (frame, fIx) {
-            var spectrum = fjs.toSpectrum(frame, {
-                    sampling: sampleRate, 
-                    method: 'fft'
-                }),
-                amplitudes = [];
+var wr = new wav.Reader();
+  
+wr.on('data', function (buffer, offset, length) {
+  framer.frame(buffer, function (frame, fIx) {
+    if (frame.length != program.samplesPerFrame) return;
 
-            spectrum.forEach(function (spectra, ix) {
-                if (!freqAssigned) binsToFreq[ix] = spectra.frequency;
-                bins[ix].push(spectra.amplitude);
-                amplitudes.push(spectra.amplitude);
-            });
+    var phasors = fft.fft(frame),
+        phasorMagnitudes = fft.util.fftMag(phasors),
+        result = mfcc(phasorMagnitudes, program.debug && true);
 
-            console.log(spectrum);
-            //var freqPowers = mfcc.periodogram(amplitudes),
-            //    melSpec = filterBank(freqPowers);
+    if (program.debug == 1)
+    {
+      console.log('Frame ' + fIx);
+      console.log('Frame ' + frame.join(','));
+      console.log('FFT ' + phasorMagnitudes.join(','));
+      console.log('Powers: ' + result.powers.join(','));
+      console.log('Post-filters: ' + result.melSpec.join(','));
+      console.log('Post-DCT: ' + result.melCoef.join(','));
+    }
+    else if (program.debug == 2)
+    {
+      console.log('Filters: ', result.filters);
+    }
+    else if (program.debug == 3)
+    {
+      console.log(phasorMagnitudes.join(','));
+    }
+    else if (!program.debug) console.log(fIx + ',' + result.join(','));
+  });
+});
 
-            //var melCoefficients= dct.run(melSpec);
-            //console.log([fIx].concat(melCoefficients).join(','));
-        });
-    });
+wr.on('format', function (format) {
 
-    wr.on('format', function (format) {
-        //TODO customize framer based on actual wave headers rather
-        // than assuming ulaw!
-        framer = new Framer({
-            map: u2pcm,
-            sizeS: framerSamples,
-            stepS: framerStep,
-            scale: win
-        });
-    });
+  var sampleRate = format.sampleRate;
 
-    wr.on('end', function () {
-        statistics();
-        if (program.args.length == 2) writeToCSV();
-        var end = new Date().getTime();
-        console.log('Elapsed: ', end - start);
-        console.log(binsStats);
-        process.exit(1);
-    });
+  ham = require('signal-windows').windows.construct('ham', program.samplesPerFrame);
 
-    var start = new Date().getTime();
-    fs.createReadStream(program.args[0]).pipe(wr);
-}
+  var ulawMap = format.ulaw ? JSON.parse(fs.readFileSync('data/ulaw2pcm.json').toString()) : undefined;
 
-function parseFFTAmplitudes(fftBinFile) {
-    var amplitudes = JSON.parse(fs.readFileSync(path.resolve(fftBinFile)).toString());
-    return amplitudes.map(parseFloat);
-}
+  if (ulawMap) for (var k in ulawMap) ulawMap[k] = ulawMap[k]/32767;
 
-function statistics() {
-    bins.forEach(function (bin, ix) {
-        var s = (new Stats()).push(bin); 
-        binsStats[ix] = {
-            freq: binsToFreq[ix],
-            amean: s.amean()
-        };
-    });
-}
+  if (format.channels != 1)
+    throw Error('Right now this MFCC code only works on single channel 8-bit wave files.');
+  if (format.bitDepth != 8)
+    throw Error('Right now this MFCC code only works on single channel 8-bit wave files.');
 
-function writeCSVHeader(columns) {
-    var headers = columns.join(',');
+  // Breaks samples up into frames and runs them through a transform (map) if
+  // provided. In our case we want to transform from u-law if the wave file is
+  // formatted as such.
+  // By default we force a 'hamming' window.
+  framer = new Framer({
+    map: ulawMap,
+    frameSize: program.samplesPerFrame,
+    frameStep: program.samplesPerStep,
+    scale: ham,
+    sampleType: 'UInt8'
+  });
 
-    fs.writeFileSync(program.output, headers);
-}
+  mfcc = mfcc.construct(program.samplesPerFrame / 2,
+                        program.numMelSpecFilters,
+                        program.minFrequency,
+                        program.maxFrequency,
+                        format.sampleRate);
+});
 
-function output(columns, rows) {
-   // First see if CSV already exists
-   if (fs.existsSync(program.output))
-   {
-       var contents = fs.readFileSync(program.output).toString();
+wr.on('end', function () {
+  process.exit(1);
+});
 
-       if (contents.indexOf(columns[0]) == -1)
-           writeCSVHeader(columns);
-       // Otherwise header already exists
-   }
-   else 
-       writeCSVHeader(columns);
-
-   rows = rows.map(function (r) {
-       return r.join(',');
-   });
-
-   rows = rows.join('\n');
-
-   // Write out a single line of data
-   fs.appendFileSync(program.output, '\n' + rows);
-}
+fs.createReadStream(program.wav).pipe(wr);
