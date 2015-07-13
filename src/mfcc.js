@@ -60,16 +60,21 @@ function construct(fftSize, bankCount, lowFrequency, highFrequency, sampleRate) 
     if (fft.length != fftSize)
       throw Error('Passed in FFT bins were incorrect size. Expected ' + fftSize + ' but was ' + fft.length);
 
-    var powers = powerSpectrum(fft),
-        melSpec = filterBank.filter(powers),
-        melCoef = dct(melSpec);
+    var //powers = powerSpectrum(fft),
+        melSpec = filterBank.filter(fft),
+        melSpecLog = melSpec.map(log),
+        melCoef = dct(melSpecLog).slice(0,13),
+        power = melCoef.splice(0,1);
 
     return debug ? {
-      powers: powers,
       melSpec: melSpec,
+      melSpecLog: melSpecLog,
       melCoef: melCoef,
-      filters: filterBank
+      filters: filterBank,
+      power: power
     } : melCoef;
+
+    function log(m){return Math.log(1+m);};
   }
 }
 

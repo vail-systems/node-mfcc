@@ -66,8 +66,8 @@ wr.on('data', function (buffer, offset, length) {
       console.log('Frame ' + fIx);
       console.log('Frame ' + frame.join(','));
       console.log('FFT ' + phasorMagnitudes.join(','));
-      console.log('Powers: ' + result.powers.join(','));
-      console.log('Post-filters: ' + result.melSpec.join(','));
+      console.log('Post-filters(' + result.melSpec.length + '): ' + result.melSpec.join(','));
+      console.log('Post-filters Log(' + result.melSpecLog.length + '): ' + result.melSpecLog.join(','));
       console.log('Post-DCT: ' + result.melCoef.join(','));
     }
     else if (program.debug == 2)
@@ -80,7 +80,7 @@ wr.on('data', function (buffer, offset, length) {
     }
     else if (!program.debug)
     {
-      result = result.slice(0,12).map(function (f) {return f.toFixed(4);});
+      result = result.map(function (f) {return f.toFixed(4);});
 
       console.log(fIx + ',' + result.join(','));
     }
