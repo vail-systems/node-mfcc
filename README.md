@@ -1,4 +1,4 @@
-# node-mfcc
+# mfcc
 Node.JS implementation of the MFCC (Mel Frequency Cepstrum Coefficients) algorithm.
 
 Uses the pure Javascript implementations:
