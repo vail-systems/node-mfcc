@@ -1,7 +1,7 @@
 {
   "name": "node-mfcc",
-  "version": "0.0.1",
-  "description": "Node.js implementation of the MFCC audio speech analysis algorithm with custom liftering.",
+  "version": "0.0.2",
+  "description": "Node.js implementation of the MFCC audio speech analysis algorithm.",
   "license": "MIT",
   "homepage": "https://github.com/joshjung/node-mfcc",
   "repository": "joshjung/node-mfcc",
@@ -19,6 +19,11 @@
   ],
   "keywords": [
     "mfcc",
+    "mel",
+    "scale",
+    "cepstrum",
+    "coefficients",
+    "frequency",
     "fft",
     "audio",
     "speech"
@@ -26,11 +31,7 @@
   "dependencies": {
     "commander": "^2.8.1",
     "dct": "^0.0.2",
-    "fast-stats": "0.0.2",
-    "fft": "^0.2.1",
     "fft-js": "0.0.6",
-    "frequencyjs": "0.0.3",
-    "signal-windows": "0.0.1",
     "wav": "^1.0.0"
   }
 }
